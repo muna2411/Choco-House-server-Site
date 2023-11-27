@@ -31,6 +31,8 @@ const userCollection = client.db("restaurant").collection("users");
 const menuCollection = client.db("restaurant").collection("menu");
 const reviewCollection = client.db("restaurant").collection("reviews");
 const cartCollection = client.db("restaurant").collection("carts");
+const listCollection = client.db("restaurant").collection("list");
+
 
 //jwt
 app.post('/jwt', async (req, res) => {
@@ -67,7 +69,9 @@ const verifyToken = (req, res, next) => {
 //   next();
 // }
 
-// users related api
+
+
+// users related api for admin
 app.get('/users', verifyToken, async (req, res) => {
   const result = await userCollection.find().toArray();
   res.send(result);
@@ -79,7 +83,6 @@ app.get('/users/admin/:email', verifyToken, async (req, res) => {
   if (email !== req.decoded.email) {
     return res.status(403).send({ message: 'forbidden access' })
   }
-
   const query = { email: email };
   const user = await userCollection.findOne(query);
   let admin = false;
@@ -89,6 +92,22 @@ app.get('/users/admin/:email', verifyToken, async (req, res) => {
   res.send({ admin });
 })
 
+
+// users related api for manager
+app.get('/users/manager/:email', verifyToken, async (req, res) => {
+  const email = req.params.email;
+
+  if (email !== req.decoded.email) {
+    return res.status(403).send({ message: 'forbidden access' });
+  }
+  const query = { email: email };
+  const user = await userCollection.findOne(query);
+  let manager = false;
+  if (user) {
+    manager = user?.role === 'manager';
+  }
+  res.send({ manager });
+});
 
 
 
@@ -102,10 +121,15 @@ app.post('/users', async (req, res) => {
   if (existingUser) {
     return res.send({ message: 'user already exists', insertedId: null })
   }
+
+  user.role = user.role || 'user';  //chilo na age notun add korlam 
+
   const result = await userCollection.insertOne(user);
   res.send(result);
 });
 
+
+//for admin
 app.patch('/users/admin/:id', verifyToken,  async (req, res) => {
   const id = req.params.id;
   const filter = { _id: new ObjectId(id) };
@@ -117,6 +141,23 @@ app.patch('/users/admin/:id', verifyToken,  async (req, res) => {
   const result = await userCollection.updateOne(filter, updatedDoc);
   res.send(result);
 })
+
+
+//for manager
+app.patch('/users/manager/:id', verifyToken, async (req, res) => {
+  const id = req.params.id;
+  const filter = { _id: new ObjectId(id) };
+  const updatedDoc = {
+    $set: {
+      role: 'manager',
+    },
+  };
+  const result = await userCollection.updateOne(filter, updatedDoc);
+  res.send(result);
+});
+
+
+
 
 app.delete('/users/:id', verifyToken,  async (req, res) => {
   const id = req.params.id;
@@ -136,6 +177,55 @@ app.post('/menu' , async(req,res) =>{
   const menu= req.body;
   console.log('new menu : ' , menu);
   const result = await menuCollection.insertOne(menu);
+  res.send(result);
+})
+
+
+
+//list
+app.get('/list' , async(req,res) =>{
+  const result = await listCollection.find().toArray();
+  res.send(result);
+})
+
+app.post('/list' , async(req,res) =>{
+const list= req.body;
+console.log('new list : ' , list);
+const result = await listCollection.insertOne(list);
+res.send(result);
+})
+
+app.get('/list/:id', async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) }
+  const result = await listCollection.findOne(query);
+  res.send(result);
+})
+
+app.patch('/list/:id', async (req, res) => {
+  const item = req.body;
+  const id = req.params.id;
+  const filter = { _id: new ObjectId(id) }
+  const updatedDoc = {
+    $set: {
+      productname: item.productname,
+      quantity: item.quantity,
+      location: item. location,
+      price: item.price,
+      profit: item.profit,
+      discount: item.discount,
+      description: item.description,
+      image: item.image
+    }
+  }
+  const result = await listCollection.updateOne(filter, updatedDoc)
+  res.send(result);
+})
+
+app.delete('/list/:id', verifyToken,  async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) }
+  const result = await listCollection.deleteOne(query);
   res.send(result);
 })
 
