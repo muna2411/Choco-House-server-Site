@@ -2,7 +2,9 @@ const express = require('express')
 const app = express()
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-require('dotenv').config()
+require('dotenv').config();
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
 const port = process.env.PORT || 5000;
 
 //midleware
@@ -25,14 +27,15 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    //await client.connect();
 
 const userCollection = client.db("restaurant").collection("users");
 const menuCollection = client.db("restaurant").collection("menu");
+const offerCollection = client.db("restaurant").collection("offer");
 const reviewCollection = client.db("restaurant").collection("reviews");
 const cartCollection = client.db("restaurant").collection("carts");
 const listCollection = client.db("restaurant").collection("list");
-
+const payCollection = client.db("restaurant").collection("payment");
 
 //jwt
 app.post('/jwt', async (req, res) => {
@@ -173,12 +176,27 @@ app.get('/menu' , async(req,res) =>{
     res.send(result);
 })
 
+// app.get('/menu/:email' , async(req,res) =>{
+//   const email = req.query.email;
+//   const query = {email: email};
+//   const result = await menuCollection.find(query).toArray();
+//   res.send(result);
+// })
+
 app.post('/menu' , async(req,res) =>{
   const menu= req.body;
   console.log('new menu : ' , menu);
   const result = await menuCollection.insertOne(menu);
   res.send(result);
 })
+
+app.delete('/menu/:id' , async(req,res) => {
+  const id = req.params.id;
+  const query = {_id: new ObjectId(id)}
+  const result = await menuCollection.deleteOne(query);
+  res.send(result);
+})
+
 
 
 
@@ -236,8 +254,20 @@ app.get('/reviews' , async(req,res) =>{
     res.send(result);
 })
 
+//offer
+app.get('/offer' , async(req,res) =>{
+  const result = await offerCollection.find().toArray();
+  res.send(result);
+})
+
+//payment
+app.get('/payment' , async(req,res) =>{
+  const result = await payCollection.find().toArray();
+  res.send(result);
+})
+
 //carts
-app.get('/carts' , async(req,res) =>{
+app.get('/menu' , async(req,res) =>{
   const email = req.query.email;
   const query = {email: email};
   const result = await cartCollection.find(query).toArray();
@@ -257,8 +287,31 @@ app.delete('/carts/:id' , async(req,res) => {
 })
 
 
+
+//payment
+app.post("/create-payment-intent", async (req, res) => {
+  const { price } = req.body;
+  const amount = parseInt(price * 100);
+  // Create a PaymentIntent with the order amount and currency
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: amount,
+    currency: "usd",
+    payment_method_types: [
+      "card"
+    ]
+  });
+  
+  res.send({
+    clientSecret: paymentIntent.client_secret,
+  });
+});
+
+
+
+
+
     //await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    //console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
     //await client.close();
