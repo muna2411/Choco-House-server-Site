@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 5001;
 
 //midleware
 app.use(cors());
@@ -40,7 +40,7 @@ const payCollection = client.db("restaurant").collection("payment");
 //jwt
 app.post('/jwt', async (req, res) => {
   const user = req.body;
-  const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+  const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '5h' });
   res.send({ token });
 })
 
@@ -267,7 +267,7 @@ app.get('/payment' , async(req,res) =>{
 })
 
 //carts
-app.get('/menu' , async(req,res) =>{
+app.get('/cart' , async(req,res) =>{
   const email = req.query.email;
   const query = {email: email};
   const result = await cartCollection.find(query).toArray();
@@ -327,3 +327,25 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
+
+
+
+
+// {
+//   "version": 2,
+
+
+  
+//       "builds": [
+//         { "src": "./index.js", "use": "@vercel/node" }
+//       ],
+    
+    
+//   "routes": [
+//       {
+//           "src": "/(.*)",
+//           "dest": "/",
+//           "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+//       }
+//   ]
+// }
